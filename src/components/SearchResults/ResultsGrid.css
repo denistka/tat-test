@@ -1,0 +1,9 @@
+.results-grid {
+  display: grid;
+  /* Auto-fill columns: at least 250px, otherwise fill available space */
+  /* This naturally creates 2 columns on desktops and 1 column on mobile */
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) 0;
+  width: 100%;
+}
