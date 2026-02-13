@@ -155,6 +155,8 @@ export const useSearchPrices = () => {
     status,
     prices,
     error,
+    isSearching: status === 'loading' || status === 'polling',
+    activeCountryID: countryIDRef.current,
     search
   };
 };

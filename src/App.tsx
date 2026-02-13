@@ -11,7 +11,7 @@ import { joinTourData } from './utils/tourDataJoin'
 import type { GeoEntity } from './types/geo'
 
 function App() {
-  const { status, prices, error: searchError, search } = useSearchPrices()
+  const { status, prices, error: searchError, isSearching, activeCountryID, search } = useSearchPrices()
   const { hotels, isLoading: isHotelsLoading, error: hotelsError, fetchHotels } = useHotels()
   const [lastSelectedName, setLastSelectedName] = useState<string | null>(null)
 
@@ -42,7 +42,11 @@ function App() {
     <main>
       <h1>Tour Search</h1>
       
-      <SearchForm onSubmit={handleSearchSubmit} />
+      <SearchForm 
+        onSubmit={handleSearchSubmit} 
+        isSearching={isSearching}
+        activeCountryID={activeCountryID}
+      />
 
       <section className="results-container">
         {isLoading && (

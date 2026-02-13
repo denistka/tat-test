@@ -6,6 +6,8 @@ import './SearchForm.css';
 
 interface SearchFormProps {
   onSubmit: (entity: GeoEntity) => void;
+  isSearching?: boolean;
+  activeCountryID?: string | null;
 }
 
 /**
@@ -13,7 +15,11 @@ interface SearchFormProps {
  * Composes the geo-search logic (hook) with UI elements.
  * Following CTO rule: < 100 lines.
  */
-export const SearchForm: React.FC<SearchFormProps> = ({ onSubmit }) => {
+export const SearchForm: React.FC<SearchFormProps> = ({ 
+  onSubmit, 
+  isSearching = false, 
+  activeCountryID = null 
+}) => {
   const {
     query,
     results,
@@ -32,6 +38,11 @@ export const SearchForm: React.FC<SearchFormProps> = ({ onSubmit }) => {
       onSubmit(selected);
     }
   };
+
+  // Logic: disable if nothing selected OR (searching AND same country)
+  const currentSelectedCountryID = selected?.type === 'country' ? String(selected.id) : selected?.countryId;
+  const isSameCountry = currentSelectedCountryID === activeCountryID;
+  const isSubmitDisabled = !selected || (isSearching && isSameCountry);
 
   return (
     <form className="search-form" onSubmit={handleFormSubmit}>
@@ -60,9 +71,9 @@ export const SearchForm: React.FC<SearchFormProps> = ({ onSubmit }) => {
       <button 
         type="submit" 
         className="search-form__submit"
-        disabled={!selected}
+        disabled={isSubmitDisabled}
       >
-        Знайти
+        {isSearching && isSameCountry ? 'Шукаємо...' : 'Знайти'}
       </button>
     </form>
   );
