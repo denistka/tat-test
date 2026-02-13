@@ -1,5 +1,5 @@
 import { getCountries, searchGeo } from '../api/api.js';
-import { CountriesMap, GeoEntity, GeoResponse } from '../types/geo.js';
+import type { CountriesMap, GeoEntity, GeoResponse } from '../types/geo.js';
 
 /**
  * Service to handle geo-related network requests.

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { GeoEntity } from '../types/geo.js';
+import type { GeoEntity } from '../types/geo.js';
 import { geoService } from '../services/geoService.js';
 
 /**
@@ -25,7 +25,7 @@ export const useGeoSearch = () => {
       const searchResults = await geoService.searchGeo(searchQuery);
       setResults(searchResults);
       setIsOpen(true);
-    } catch (error) {
+    } catch {
       // In a real app, we'd handle this via UI error states
       setResults([]);
     } finally {
@@ -49,7 +49,7 @@ export const useGeoSearch = () => {
       }));
       setResults(countryEntities);
       setIsOpen(true);
-    } catch (error) {
+    } catch {
       setResults([]);
     } finally {
       setIsLoading(false);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useGeoSearch } from '../../hooks/useGeoSearch.js';
 import { DropdownMenu } from './DropdownMenu.js';
-import { GeoEntity } from '../../types/geo.js';
+import type { GeoEntity } from '../../types/geo.js';
 import './SearchForm.css';
 
 interface SearchFormProps {

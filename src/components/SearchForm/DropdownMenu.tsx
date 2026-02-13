@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { GeoEntity } from '../../types/geo.js';
+import type { GeoEntity } from '../../types/geo.js';
 import { DropdownItem } from './DropdownItem.js';
 import './DropdownMenu.css';
 

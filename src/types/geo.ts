@@ -30,6 +30,7 @@ export interface GeoEntity {
   img?: string;
   cityName?: string;
   countryName?: string;
+  countryId?: string;
 }
 
 export type CountriesMap = Record<string, Country>;

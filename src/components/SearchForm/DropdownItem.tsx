@@ -1,5 +1,5 @@
 import React from 'react';
-import { GeoEntity } from '../../types/geo.js';
+import type { GeoEntity } from '../../types/geo.js';
 
 interface DropdownItemProps {
   entity: GeoEntity;
