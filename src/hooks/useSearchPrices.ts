@@ -1,0 +1,137 @@
+import { useState, useCallback, useRef, useEffect } from 'react';
+import type { PricesMap, SearchStatus, SearchError } from '../types/search.js';
+import { priceService } from '../services/priceService.js';
+import { searchStore } from '../store/searchStore.js';
+
+/**
+ * Hook to manage price search polling state machine.
+ * Logic layer: orchestrates initial request, polling delays, and retries.
+ */
+export const useSearchPrices = () => {
+  const [status, setStatus] = useState<SearchStatus>('idle');
+  const [prices, setPrices] = useState<PricesMap | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Use refs for non-rendered data (CTO & QA rule)
+  const tokenRef = useRef<string | null>(null);
+  const countryIDRef = useRef<string | null>(null);
+  const retryCountRef = useRef<number>(0);
+  const timerRef = useRef<number | null>(null);
+  const isMountedRef = useRef<boolean>(true);
+
+  /**
+   * Clears any active polling timers.
+   */
+  const clearTimer = useCallback(() => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * The core polling logic that checks for results after a delay.
+   */
+  // Use a ref to prevent self-reference issues in useCallback/useEffect
+  const pollForResults = useCallback(async () => {
+    if (!tokenRef.current || !isMountedRef.current) return;
+
+    try {
+      const results = await priceService.getResults(tokenRef.current);
+      
+      if (!isMountedRef.current) return;
+
+      if (Object.keys(results).length === 0) {
+        setStatus('empty');
+      } else {
+        setPrices(results);
+        setStatus('success');
+        
+        // Caching requirement from spec
+        if (countryIDRef.current) {
+          searchStore.setCache(countryIDRef.current, results);
+        }
+      }
+    } catch (err) {
+      if (!isMountedRef.current) return;
+
+      const searchError = err as SearchError;
+
+      // Handle 425 Too Early: Scheduling next poll
+      if (searchError.code === 425 && searchError.waitUntil) {
+        const delay = Math.max(0, Date.parse(searchError.waitUntil) - Date.now());
+        setStatus('polling');
+        timerRef.current = window.setTimeout(pollForResults, delay);
+        return;
+      }
+
+      // Retry logic for other errors
+      if (retryCountRef.current < 2) {
+        retryCountRef.current += 1;
+        setStatus('polling');
+        timerRef.current = window.setTimeout(pollForResults, 2000);
+      } else {
+        setError(searchError.message || 'Failed to fetch prices after retries');
+        setStatus('error');
+      }
+    }
+  }, []);
+
+  /**
+   * Initiates a new price search.
+   */
+  const search = useCallback(async (countryID: string) => {
+    // 0. Check cache first
+    const cached = searchStore.getCache(countryID);
+    if (cached) {
+      setPrices(cached);
+      setStatus('success');
+      setError(null);
+      return;
+    }
+
+    // 1. Reset state for new search
+    clearTimer();
+    setStatus('loading');
+    setError(null);
+    setPrices(null);
+    tokenRef.current = null;
+    countryIDRef.current = countryID; // Store for caching next successful result
+    retryCountRef.current = 0;
+
+    try {
+      // 2. Start search and get token
+      const { token, waitUntil } = await priceService.startSearch(countryID);
+      
+      if (!isMountedRef.current) return;
+      tokenRef.current = token;
+
+      // 3. Schedule first poll based on waitUntil
+      const delay = Math.max(0, Date.parse(waitUntil) - Date.now());
+      setStatus('polling');
+      timerRef.current = window.setTimeout(pollForResults, delay);
+
+    } catch (err) {
+      if (!isMountedRef.current) return;
+      const searchError = err as SearchError;
+      setError(searchError.message || 'Could not start price search');
+      setStatus('error');
+    }
+  }, [clearTimer, pollForResults]);
+
+  // Handle unmount cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      clearTimer();
+    };
+  }, [clearTimer]);
+
+  return {
+    status,
+    prices,
+    error,
+    search
+  };
+};
