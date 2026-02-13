@@ -13,7 +13,7 @@ export const useSearchPrices = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Use refs for non-rendered data (CTO & QA rule)
-  const tokenRef = useRef<string | null>(null);
+  const currentTokenRef = useRef<string | null>(null);
   const countryIDRef = useRef<string | null>(null);
   const retryCountRef = useRef<number>(0);
   const timerRef = useRef<number | null>(null);
@@ -34,12 +34,14 @@ export const useSearchPrices = () => {
    * Using a function declaration here to allow self-reference without lint errors.
    */
   async function pollForResults() {
-    if (!tokenRef.current || !isMountedRef.current) return;
+    const activeToken = currentTokenRef.current;
+    if (!activeToken || !isMountedRef.current) return;
 
     try {
-      const results = await priceService.getResults(tokenRef.current);
+      const results = await priceService.getResults(activeToken);
       
-      if (!isMountedRef.current) return;
+      // ST2 Guard: Check if this response is still relevant (race condition guard)
+      if (activeToken !== currentTokenRef.current || !isMountedRef.current) return;
 
       if (Object.keys(results).length === 0) {
         setStatus('empty');
@@ -53,7 +55,8 @@ export const useSearchPrices = () => {
         }
       }
     } catch (err) {
-      if (!isMountedRef.current) return;
+      const activeTokenOnCatch = currentTokenRef.current;
+      if (activeToken !== activeTokenOnCatch || !isMountedRef.current) return;
 
       const searchError = err as SearchError;
 
@@ -98,7 +101,7 @@ export const useSearchPrices = () => {
     setStatus('loading');
     setError(null);
     setPrices(null);
-    tokenRef.current = null;
+    currentTokenRef.current = null;
     countryIDRef.current = countryID;
     retryCountRef.current = 0;
 
@@ -107,7 +110,7 @@ export const useSearchPrices = () => {
       const { token, waitUntil } = await priceService.startSearch(countryID);
       
       if (!isMountedRef.current) return;
-      tokenRef.current = token;
+      currentTokenRef.current = token;
 
       // 3. Schedule first poll based on waitUntil
       const delay = Math.max(0, Date.parse(waitUntil) - Date.now());
