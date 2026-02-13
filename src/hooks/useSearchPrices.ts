@@ -30,6 +30,18 @@ export const useSearchPrices = () => {
   }, []);
 
   /**
+   * Cancels the active search by stopping the timer and calling the service.
+   */
+  const cancelCurrentSearch = useCallback(async () => {
+    if (currentTokenRef.current) {
+      clearTimer();
+      const tokenToCancel = currentTokenRef.current;
+      currentTokenRef.current = null; // Mark as cancelled locally first
+      await priceService.stopSearch(tokenToCancel);
+    }
+  }, [clearTimer]);
+
+  /**
    * The core polling logic that checks for results after a delay.
    * Using a function declaration here to allow self-reference without lint errors.
    */
@@ -87,6 +99,11 @@ export const useSearchPrices = () => {
    * Initiates a new price search.
    */
   const search = useCallback(async (countryID: string) => {
+    // ST3: If search is active, cancel it first
+    if (currentTokenRef.current) {
+      await cancelCurrentSearch();
+    }
+
     // 0. Check cache first
     const cached = searchStore.getCache(countryID);
     if (cached) {
