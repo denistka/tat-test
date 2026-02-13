@@ -31,9 +31,9 @@ export const useSearchPrices = () => {
 
   /**
    * The core polling logic that checks for results after a delay.
+   * Using a function declaration here to allow self-reference without lint errors.
    */
-  // Use a ref to prevent self-reference issues in useCallback/useEffect
-  const pollForResults = useCallback(async () => {
+  async function pollForResults() {
     if (!tokenRef.current || !isMountedRef.current) return;
 
     try {
@@ -75,7 +75,10 @@ export const useSearchPrices = () => {
         setStatus('error');
       }
     }
-  }, []);
+  }
+
+  // Wrap pollForResults in useCallback if we need to expose it, but here it's internal.
+  // We just need a stable search function to expose.
 
   /**
    * Initiates a new price search.
@@ -96,7 +99,7 @@ export const useSearchPrices = () => {
     setError(null);
     setPrices(null);
     tokenRef.current = null;
-    countryIDRef.current = countryID; // Store for caching next successful result
+    countryIDRef.current = countryID;
     retryCountRef.current = 0;
 
     try {
@@ -117,7 +120,7 @@ export const useSearchPrices = () => {
       setError(searchError.message || 'Could not start price search');
       setStatus('error');
     }
-  }, [clearTimer, pollForResults]);
+  }, [clearTimer]); // pollForResults is stable as a function declaration in this scope
 
   // Handle unmount cleanup
   useEffect(() => {

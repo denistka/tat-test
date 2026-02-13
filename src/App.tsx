@@ -1,20 +1,24 @@
 import { useState } from 'react'
 import './index.css'
 import { SearchForm } from './components/SearchForm/SearchForm'
+import { LoadingState } from './components/SearchResults/LoadingState'
+import { ErrorState } from './components/SearchResults/ErrorState'
+import { EmptyState } from './components/SearchResults/EmptyState'
+import { useSearchPrices } from './hooks/useSearchPrices'
 import type { GeoEntity } from './types/geo'
 
 function App() {
-  const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null)
+  const { status, prices, error, search } = useSearchPrices()
+  const [lastSelectedName, setLastSelectedName] = useState<string | null>(null)
 
   const handleSearchSubmit = (entity: GeoEntity) => {
-    console.log('Search submitted for:', entity)
+    setLastSelectedName(entity.name)
     
-    // Store country ID for the next phase (Price Engine)
-    // If it's a country, we use its ID. If it's a city/hotel, we use the countryId property.
+    // Extract countryId for the price search
     const countryId = entity.type === 'country' ? String(entity.id) : entity.countryId
     
     if (countryId) {
-      setSelectedCountryId(countryId)
+      search(countryId)
     }
   }
 
@@ -24,11 +28,29 @@ function App() {
       
       <SearchForm onSubmit={handleSearchSubmit} />
 
-      {selectedCountryId && (
-        <p style={{ marginTop: 'var(--spacing-md)', color: 'var(--color-text-muted)' }}>
-          Selected Country ID for Price Engine: {selectedCountryId}
-        </p>
-      )}
+      <section className="results-container">
+        {(status === 'loading' || status === 'polling') && (
+          <LoadingState />
+        )}
+
+        {status === 'error' && error && (
+          <ErrorState message={error} />
+        )}
+
+        {status === 'empty' && (
+          <EmptyState />
+        )}
+
+        {status === 'success' && prices && (
+          <div className="placeholder-results">
+            <h2>Тури для {lastSelectedName}</h2>
+            <p>Знайдено пропозицій: {Object.keys(prices).length}</p>
+            <pre style={{ fontSize: '10px', overflow: 'auto', background: '#eee', padding: '10px' }}>
+              {JSON.stringify(prices, null, 2)}
+            </pre>
+          </div>
+        )}
+      </section>
     </main>
   )
 }
