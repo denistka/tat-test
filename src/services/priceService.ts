@@ -1,4 +1,4 @@
-import { startSearchPrices, getSearchPrices } from '../api/api.js';
+import { startSearchPrices, getSearchPrices, stopSearchPrices } from '../api/api.js';
 import type { PricesMap, StartSearchResponse, SearchError, GetSearchPricesResponse } from '../types/search.js';
 
 /**
@@ -45,6 +45,28 @@ export const priceService = {
       // Re-throw if it's already a shaped SearchError (like 425 or 404)
       if ((error as SearchError).error) throw error;
       throw new Error('Failed to fetch search prices');
+    }
+  },
+
+  /**
+   * Stops an active search.
+   * Ignores 404 errors as the token might already be expired/cancelled.
+   */
+  async stopSearch(token: string): Promise<void> {
+    try {
+      const response = await stopSearchPrices(token);
+      // Even if not ok, we parse to ensure we handle it, but we primarily care about 404
+      if (!response.ok && response.status !== 404) {
+        const errorData: SearchError = await response.json();
+        throw errorData;
+      }
+    } catch (error) {
+      // Ignore 404 (token already gone) as requested in ST1
+      if ((error as Response)?.status === 404) return;
+      if ((error as SearchError).error && (error as SearchError).code === 404) return;
+      
+      // For other errors, we can log or ignore, but ST1 says handle 404 gracefully
+      console.warn('stopSearch failed:', error);
     }
   }
 };
