@@ -131,6 +131,8 @@ export const useSearchPrices = () => {
 
       // 3. Schedule first poll based on waitUntil
       const delay = Math.max(0, Date.parse(waitUntil) - Date.now());
+      if (!isMountedRef.current) return;
+      
       setStatus('polling');
       timerRef.current = window.setTimeout(pollForResults, delay);
 
@@ -140,7 +142,7 @@ export const useSearchPrices = () => {
       setError(searchError.message || 'Could not start price search');
       setStatus('error');
     }
-  }, [clearTimer]); // pollForResults is stable as a function declaration in this scope
+  }, [cancelCurrentSearch]); // pollForResults is stable as a function declaration
 
   // Handle unmount cleanup
   useEffect(() => {
