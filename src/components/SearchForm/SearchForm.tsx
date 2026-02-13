@@ -8,6 +8,7 @@ interface SearchFormProps {
   onSubmit: (entity: GeoEntity) => void;
   isSearching?: boolean;
   activeCountryID?: string | null;
+  onSelectionChange?: (entity: GeoEntity | null) => void;
 }
 
 /**
@@ -18,7 +19,8 @@ interface SearchFormProps {
 export const SearchForm: React.FC<SearchFormProps> = ({ 
   onSubmit, 
   isSearching = false, 
-  activeCountryID = null 
+  activeCountryID = null,
+  onSelectionChange
 }) => {
   const {
     query,
@@ -31,6 +33,11 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     onSelect,
     closeDropdown
   } = useGeoSearch();
+
+  // Notify parent of selection changes (ST4 requirement: cancel if country chosed)
+  React.useEffect(() => {
+    onSelectionChange?.(selected);
+  }, [selected, onSelectionChange]);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();

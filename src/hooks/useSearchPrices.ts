@@ -31,19 +31,40 @@ export const useSearchPrices = () => {
 
   /**
    * Cancels the active search by stopping the timer and calling the service.
+   * Internal version used by exposed 'cancel' and 'search'.
    */
-  const cancelCurrentSearch = useCallback(async () => {
+  const performCancellation = useCallback(async () => {
     if (currentTokenRef.current) {
       clearTimer();
       const tokenToCancel = currentTokenRef.current;
       currentTokenRef.current = null; // Mark as cancelled locally first
+      
+      setStatus('cancelling');
+      countryIDRef.current = null; // Reset active ID so UI stops showing "Searching" for this country
+      
       await priceService.stopSearch(tokenToCancel);
+      
+      // Only set to idle if no new search has been started since we cleared the token
+      if (currentTokenRef.current === null) {
+        setStatus('idle');
+      }
+    } else {
+      clearTimer();
+      countryIDRef.current = null;
+      setStatus('idle');
     }
   }, [clearTimer]);
 
   /**
+   * Exposed cancel function.
+   */
+  const cancel = useCallback(async () => {
+    await performCancellation();
+  }, [performCancellation]);
+
+  /**
    * The core polling logic that checks for results after a delay.
-   * Using a function declaration here to allow self-reference without lint errors.
+   * Using a function declaration here to allow self-reference (recursion) without declaration errors.
    */
   async function pollForResults() {
     const activeToken = currentTokenRef.current;
@@ -99,12 +120,15 @@ export const useSearchPrices = () => {
    * Initiates a new price search.
    */
   const search = useCallback(async (countryID: string) => {
-    // ST3: If search is active, cancel it first
+    // 1. If search is active, cancel it first as per ST4
     if (currentTokenRef.current) {
-      await cancelCurrentSearch();
+      await performCancellation();
     }
 
-    // 0. Check cache first
+    // 2. Set new active country ID
+    countryIDRef.current = countryID;
+
+    // 3. Check cache
     const cached = searchStore.getCache(countryID);
     if (cached) {
       setPrices(cached);
@@ -113,36 +137,37 @@ export const useSearchPrices = () => {
       return;
     }
 
-    // 1. Reset state for new search
+    // 4. Reset state and start loading
     clearTimer();
     setStatus('loading');
     setError(null);
     setPrices(null);
-    currentTokenRef.current = null;
-    countryIDRef.current = countryID;
     retryCountRef.current = 0;
 
     try {
-      // 2. Start search and get token
+      // 5. Start search and get token
       const { token, waitUntil } = await priceService.startSearch(countryID);
       
       if (!isMountedRef.current) return;
+      
+      // Important: check if we are still searching for this country
+      if (countryIDRef.current !== countryID) return;
+      
       currentTokenRef.current = token;
 
-      // 3. Schedule first poll based on waitUntil
+      // 6. Schedule first poll based on waitUntil
       const delay = Math.max(0, Date.parse(waitUntil) - Date.now());
-      if (!isMountedRef.current) return;
-      
       setStatus('polling');
       timerRef.current = window.setTimeout(pollForResults, delay);
 
     } catch (err) {
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || countryIDRef.current !== countryID) return;
       const searchError = err as SearchError;
       setError(searchError.message || 'Could not start price search');
       setStatus('error');
     }
-  }, [cancelCurrentSearch]); // pollForResults is stable as a function declaration
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [performCancellation, clearTimer]); // Depend on stable callbacks
 
   // Handle unmount cleanup
   useEffect(() => {
@@ -157,8 +182,9 @@ export const useSearchPrices = () => {
     status,
     prices,
     error,
-    isSearching: status === 'loading' || status === 'polling',
+    isSearching: status === 'loading' || status === 'polling' || status === 'cancelling',
     activeCountryID: countryIDRef.current,
-    search
+    search,
+    cancel
   };
 };

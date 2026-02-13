@@ -1,4 +1,4 @@
-export type SearchStatus = 'idle' | 'loading' | 'polling' | 'success' | 'error' | 'empty';
+export type SearchStatus = 'idle' | 'loading' | 'polling' | 'success' | 'error' | 'empty' | 'cancelling';
 
 export interface PriceOffer {
   id: string;

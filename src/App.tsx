@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import './index.css'
 import { SearchForm } from './components/SearchForm/SearchForm'
 import { LoadingState } from './components/SearchResults/LoadingState'
@@ -11,7 +11,7 @@ import { joinTourData } from './utils/tourDataJoin'
 import type { GeoEntity } from './types/geo'
 
 function App() {
-  const { status, prices, error: searchError, isSearching, activeCountryID, search } = useSearchPrices()
+  const { status, prices, error: searchError, isSearching, activeCountryID, search, cancel } = useSearchPrices()
   const { hotels, isLoading: isHotelsLoading, error: hotelsError, fetchHotels } = useHotels()
   const [lastSelectedName, setLastSelectedName] = useState<string | null>(null)
 
@@ -27,6 +27,17 @@ function App() {
     }
   }
 
+  const handleSelectionChange = useCallback((entity: GeoEntity | null) => {
+    const selectedCountryId = entity
+      ? (entity.type === 'country' ? String(entity.id) : entity.countryId)
+      : null;
+    
+    // IF searching AND (nothing picked OR different country) -> cancel
+    if (isSearching && selectedCountryId !== activeCountryID) {
+      cancel();
+    }
+  }, [isSearching, activeCountryID, cancel]);
+
   // Memoize sorted tours to avoid re-calculating on every render
   const sortedTours = useMemo(() => {
     if (status === 'success' && prices && hotels) {
@@ -36,7 +47,7 @@ function App() {
   }, [status, prices, hotels]);
 
   const error = searchError || hotelsError;
-  const isLoading = status === 'loading' || status === 'polling' || isHotelsLoading;
+  const isLoading = isSearching || isHotelsLoading;
 
   return (
     <main>
@@ -46,6 +57,7 @@ function App() {
         onSubmit={handleSearchSubmit} 
         isSearching={isSearching}
         activeCountryID={activeCountryID}
+        onSelectionChange={handleSelectionChange}
       />
 
       <section className="results-container">
