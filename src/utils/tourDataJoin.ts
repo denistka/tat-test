@@ -1,5 +1,5 @@
-import { PriceOffer, PricesMap } from '../types/search';
-import { Hotel, HotelsMap, TourCardData } from '../types/hotel';
+import type { PriceOffer, PricesMap } from '../types/search';
+import type { HotelsMap, TourCardData } from '../types/hotel';
 
 /**
  * Merges price offers with hotel data and sorts them by price (ascending).

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TourCardData } from '../../types/hotel';
+import type { TourCardData } from '../../types/hotel';
 import { formatPrice, formatDateRange } from '../../utils/priceFormatter';
 import './TourCard.css';
 

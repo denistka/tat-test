@@ -1,14 +1,18 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import './index.css'
 import { SearchForm } from './components/SearchForm/SearchForm'
 import { LoadingState } from './components/SearchResults/LoadingState'
 import { ErrorState } from './components/SearchResults/ErrorState'
 import { EmptyState } from './components/SearchResults/EmptyState'
+import { ResultsGrid } from './components/SearchResults/ResultsGrid'
 import { useSearchPrices } from './hooks/useSearchPrices'
+import { useHotels } from './hooks/useHotels'
+import { joinTourData } from './utils/tourDataJoin'
 import type { GeoEntity } from './types/geo'
 
 function App() {
-  const { status, prices, error, search } = useSearchPrices()
+  const { status, prices, error: searchError, search } = useSearchPrices()
+  const { hotels, isLoading: isHotelsLoading, error: hotelsError, fetchHotels } = useHotels()
   const [lastSelectedName, setLastSelectedName] = useState<string | null>(null)
 
   const handleSearchSubmit = (entity: GeoEntity) => {
@@ -19,8 +23,20 @@ function App() {
     
     if (countryId) {
       search(countryId)
+      fetchHotels(countryId)
     }
   }
+
+  // Memoize sorted tours to avoid re-calculating on every render
+  const sortedTours = useMemo(() => {
+    if (status === 'success' && prices && hotels) {
+      return joinTourData(prices, hotels);
+    }
+    return [];
+  }, [status, prices, hotels]);
+
+  const error = searchError || hotelsError;
+  const isLoading = status === 'loading' || status === 'polling' || isHotelsLoading;
 
   return (
     <main>
@@ -29,26 +45,27 @@ function App() {
       <SearchForm onSubmit={handleSearchSubmit} />
 
       <section className="results-container">
-        {(status === 'loading' || status === 'polling') && (
+        {isLoading && (
           <LoadingState />
         )}
 
-        {status === 'error' && error && (
+        {!isLoading && error && (
           <ErrorState message={error} />
         )}
 
-        {status === 'empty' && (
+        {!isLoading && status === 'empty' && (
           <EmptyState />
         )}
 
-        {status === 'success' && prices && (
-          <div className="placeholder-results">
+        {!isLoading && status === 'success' && sortedTours.length > 0 && (
+          <div className="search-results">
             <h2>Тури для {lastSelectedName}</h2>
-            <p>Знайдено пропозицій: {Object.keys(prices).length}</p>
-            <pre style={{ fontSize: '10px', overflow: 'auto', background: '#eee', padding: '10px' }}>
-              {JSON.stringify(prices, null, 2)}
-            </pre>
+            <ResultsGrid tours={sortedTours} />
           </div>
+        )}
+
+        {!isLoading && status === 'success' && sortedTours.length === 0 && (
+          <EmptyState />
         )}
       </section>
     </main>

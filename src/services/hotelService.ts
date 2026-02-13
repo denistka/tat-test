@@ -1,5 +1,5 @@
 import { getHotels } from '../api/api.js';
-import { HotelsMap } from '../types/hotel.js';
+import type { HotelsMap } from '../types/hotel.js';
 
 /**
  * Service for fetching hotel data from the API.

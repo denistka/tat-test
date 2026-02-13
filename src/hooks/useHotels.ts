@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { hotelService } from '../services/hotelService';
-import { HotelsMap } from '../types/hotel';
+import type { HotelsMap } from '../types/hotel';
 
 /**
  * Custom hook to fetch and cache hotels per country.
