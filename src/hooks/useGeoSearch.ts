@@ -12,6 +12,7 @@ export const useGeoSearch = () => {
   const [results, setResults] = useState<GeoEntity[]>([]);
   const [selected, setSelected] = useState<GeoEntity | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   // Use ref to store timeout ID for debouncing search calls
   const debounceTimer = useRef<number | null>(null);
@@ -24,7 +25,8 @@ export const useGeoSearch = () => {
     try {
       const searchResults = await geoService.searchGeo(searchQuery);
       setResults(searchResults);
-      setIsOpen(true);
+      setIsOpen(searchResults.length > 0);
+      setActiveIndex(searchResults.length > 0 ? 0 : -1);
     } catch {
       // In a real app, we'd handle this via UI error states
       setResults([]);
@@ -49,6 +51,7 @@ export const useGeoSearch = () => {
       }));
       setResults(countryEntities);
       setIsOpen(true);
+      setActiveIndex(0);
     } catch {
       setResults([]);
     } finally {
@@ -78,6 +81,7 @@ export const useGeoSearch = () => {
     
     // Clear selection when typing - BUG FIX: selection must be cleared while typing new query
     setSelected(null);
+    setActiveIndex(-1);
     
     // Clear previous timer
     if (debounceTimer.current) {
@@ -110,6 +114,7 @@ export const useGeoSearch = () => {
    */
   const closeDropdown = useCallback(() => {
     setIsOpen(false);
+    setActiveIndex(-1);
   }, []);
 
   // Cleanup timeout on unmount
@@ -129,7 +134,9 @@ export const useGeoSearch = () => {
     onInputChange,
     onSelect,
     closeDropdown,
-    setIsOpen, // Exported for manual control if needed
-    setSelected // Exported to allow manual state overrides
+    setIsOpen,
+    setSelected,
+    activeIndex,
+    setActiveIndex
   };
 };

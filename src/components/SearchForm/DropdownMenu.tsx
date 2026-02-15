@@ -9,6 +9,7 @@ interface DropdownMenuProps {
   onSelect: (entity: GeoEntity) => void;
   onClose: () => void;
   isLoading: boolean;
+  activeIndex?: number;
 }
 
 /**
@@ -20,7 +21,8 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   isOpen, 
   onSelect, 
   onClose,
-  isLoading 
+  isLoading,
+  activeIndex = -1
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -57,10 +59,11 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
           Нічого не знайдено
         </div>
       ) : (
-        items.map((item) => (
+        items.map((item, index) => (
           <DropdownItem 
             key={`${item.type}-${item.id}`}
             entity={item}
+            isActive={index === activeIndex}
             onSelect={onSelect}
           />
         ))

@@ -31,7 +31,9 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     onInputClick,
     onInputChange,
     onSelect,
-    closeDropdown
+    closeDropdown,
+    activeIndex,
+    setActiveIndex
   } = useGeoSearch();
 
   // Notify parent of selection changes (ST4 requirement: cancel if country chosed)
@@ -41,43 +43,57 @@ export const SearchForm: React.FC<SearchFormProps> = ({
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If we have a selection, submit it
     if (selected) {
       onSubmit(selected);
+      closeDropdown();
+      return;
+    }
+
+    // If no selection but we have query and results, pick either activeIndex or first
+    if (!selected && results.length > 0) {
+      const indexToSelect = activeIndex >= 0 ? activeIndex : 0;
+      const entity = results[indexToSelect];
+      onSelect(entity);
+      onSubmit(entity);
       closeDropdown();
     }
   };
 
   /**
-   * BUG FIX: Handle Enter key explicitly.
-   * If the user presses Enter and there are results but nothing selected, 
-   * pick the first result and submit.
+   * BUG FIX: Handle Keyboard Navigation (Arrows + Enter).
    */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      // If we have a selection, the form's onSubmit will handle it, 
-      // but we can also handle it here for better control.
-      if (selected) {
-        // Form onSubmit will fire, let it do its job
-        return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen) {
+        onInputClick();
+      } else {
+        setActiveIndex(prev => (prev < results.length - 1 ? prev + 1 : prev));
       }
-
-      // If no selection but we have results, pick the first one and submit
-      if (!selected && results.length > 0) {
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
+    } else if (e.key === 'Enter') {
+      // If dropdown is open and we have an active index, select it
+      if (isOpen && activeIndex >= 0 && results[activeIndex]) {
         e.preventDefault();
-        const firstResult = results[0];
-        onSelect(firstResult);
-        onSubmit(firstResult);
-        closeDropdown();
+        onSelect(results[activeIndex]);
+        // Form submit will then be handled by the form onSubmit if we don't preventDefault, 
+        // but it's cleaner to let the selection happen first.
       }
     } else if (e.key === 'Escape') {
       closeDropdown();
     }
   };
 
-  // Logic: disable if nothing selected OR (searching AND same country)
+  // Logic: disable if (nothing selected AND query is empty) OR (searching AND same country)
   const currentSelectedCountryID = selected?.type === 'country' ? String(selected.id) : selected?.countryId;
   const isSameCountry = currentSelectedCountryID === activeCountryID;
-  const isSubmitDisabled = !selected || (isSearching && isSameCountry);
+  
+  // Requirement: enable button if input is not empty
+  const isSubmitDisabled = (!selected && !query.trim()) || (isSearching && isSameCountry) || isLoading;
 
   return (
     <form className="search-form" onSubmit={handleFormSubmit}>
@@ -99,6 +115,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           items={results}
           isOpen={isOpen}
           isLoading={isLoading}
+          activeIndex={activeIndex}
           onSelect={onSelect}
           onClose={closeDropdown}
         />
