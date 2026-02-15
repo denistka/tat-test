@@ -41,23 +41,27 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     onSelectionChange?.(selected);
   }, [selected, onSelectionChange]);
 
+  /**
+   * BUG FIX: Unified select and submit handler.
+   * Ensures search starts immediately on selection (Click or Enter).
+   */
+  const handleSelectAndSearch = (entity: GeoEntity) => {
+    onSelect(entity);
+    onSubmit(entity);
+    closeDropdown();
+  };
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // If we have a selection, submit it
     if (selected) {
-      onSubmit(selected);
-      closeDropdown();
+      handleSelectAndSearch(selected);
       return;
     }
 
-    // If no selection but we have query and results, pick either activeIndex or first
-    if (!selected && results.length > 0) {
+    if (results.length > 0) {
       const indexToSelect = activeIndex >= 0 ? activeIndex : 0;
-      const entity = results[indexToSelect];
-      onSelect(entity);
-      onSubmit(entity);
-      closeDropdown();
+      handleSelectAndSearch(results[indexToSelect]);
     }
   };
 
@@ -76,12 +80,9 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       e.preventDefault();
       setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
     } else if (e.key === 'Enter') {
-      // If dropdown is open and we have an active index, select it
       if (isOpen && activeIndex >= 0 && results[activeIndex]) {
         e.preventDefault();
-        onSelect(results[activeIndex]);
-        // Form submit will then be handled by the form onSubmit if we don't preventDefault, 
-        // but it's cleaner to let the selection happen first.
+        handleSelectAndSearch(results[activeIndex]);
       }
     } else if (e.key === 'Escape') {
       closeDropdown();
@@ -116,7 +117,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           isOpen={isOpen}
           isLoading={isLoading}
           activeIndex={activeIndex}
-          onSelect={onSelect}
+          onSelect={handleSelectAndSearch}
           onClose={closeDropdown}
         />
       </div>
