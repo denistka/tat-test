@@ -76,6 +76,9 @@ export const useGeoSearch = () => {
   const onInputChange = useCallback((value: string) => {
     setQuery(value);
     
+    // Clear selection when typing - BUG FIX: selection must be cleared while typing new query
+    setSelected(null);
+    
     // Clear previous timer
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
@@ -126,6 +129,7 @@ export const useGeoSearch = () => {
     onInputChange,
     onSelect,
     closeDropdown,
-    setIsOpen // Exported for manual control if needed
+    setIsOpen, // Exported for manual control if needed
+    setSelected // Exported to allow manual state overrides
   };
 };

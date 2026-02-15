@@ -43,6 +43,34 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     e.preventDefault();
     if (selected) {
       onSubmit(selected);
+      closeDropdown();
+    }
+  };
+
+  /**
+   * BUG FIX: Handle Enter key explicitly.
+   * If the user presses Enter and there are results but nothing selected, 
+   * pick the first result and submit.
+   */
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      // If we have a selection, the form's onSubmit will handle it, 
+      // but we can also handle it here for better control.
+      if (selected) {
+        // Form onSubmit will fire, let it do its job
+        return;
+      }
+
+      // If no selection but we have results, pick the first one and submit
+      if (!selected && results.length > 0) {
+        e.preventDefault();
+        const firstResult = results[0];
+        onSelect(firstResult);
+        onSubmit(firstResult);
+        closeDropdown();
+      }
+    } else if (e.key === 'Escape') {
+      closeDropdown();
     }
   };
 
@@ -62,6 +90,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           onFocus={onInputClick}
           onClick={onInputClick}
           onChange={(e) => onInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
           aria-autocomplete="list"
           aria-haspopup="listbox"
         />
