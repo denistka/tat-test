@@ -1,182 +1,145 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import type { PricesMap, SearchStatus, SearchError } from '../types/search.js';
-import { priceService } from '../services/priceService.js';
-import { searchStore } from '../store/searchStore.js';
+import { useState, useCallback, useRef, useEffect } from 'react'
+import type { PricesMap, SearchStatus, SearchError } from '../types/search.js'
+import { priceService } from '../services/priceService.js'
+import { searchStore } from '../store/searchStore.js'
 
-/**
- * Hook to manage price search polling state machine.
- * Logic layer: orchestrates initial request, polling delays, and retries.
- */
 export const useSearchPrices = () => {
-  const [status, setStatus] = useState<SearchStatus>('idle');
-  const [prices, setPrices] = useState<PricesMap | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<SearchStatus>('idle')
+  const [prices, setPrices] = useState<PricesMap | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  // Use refs for non-rendered data (CTO & QA rule)
-  const currentTokenRef = useRef<string | null>(null);
-  const countryIDRef = useRef<string | null>(null);
-  const retryCountRef = useRef<number>(0);
-  const timerRef = useRef<number | null>(null);
-  const isMountedRef = useRef<boolean>(true);
+  const currentTokenRef = useRef<string | null>(null)
+  const countryIDRef = useRef<string | null>(null)
+  const retryCountRef = useRef<number>(0)
+  const timerRef = useRef<number | null>(null)
+  const isMountedRef = useRef<boolean>(true)
 
-  /**
-   * Clears any active polling timers.
-   */
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
+      window.clearTimeout(timerRef.current)
+      timerRef.current = null
     }
-  }, []);
+  }, [])
 
-  /**
-   * Cancels the active search by stopping the timer and calling the service.
-   * Internal version used by exposed 'cancel' and 'search'.
-   */
   const performCancellation = useCallback(async () => {
     if (currentTokenRef.current) {
-      clearTimer();
-      const tokenToCancel = currentTokenRef.current;
-      currentTokenRef.current = null; // Mark as cancelled locally first
-      
-      setStatus('cancelling');
-      countryIDRef.current = null; // Reset active ID so UI stops showing "Searching" for this country
-      
-      await priceService.stopSearch(tokenToCancel);
-      
-      // Only set to idle if no new search has been started since we cleared the token
+      clearTimer()
+      const tokenToCancel = currentTokenRef.current
+      currentTokenRef.current = null
+
+      setStatus('cancelling')
+      countryIDRef.current = null
+
+      await priceService.stopSearch(tokenToCancel)
+
       if (currentTokenRef.current === null) {
-        setStatus('idle');
+        setStatus('idle')
       }
     } else {
-      clearTimer();
-      countryIDRef.current = null;
-      setStatus('idle');
+      clearTimer()
+      countryIDRef.current = null
+      setStatus('idle')
     }
-  }, [clearTimer]);
+  }, [clearTimer])
 
-  /**
-   * Exposed cancel function.
-   */
   const cancel = useCallback(async () => {
-    await performCancellation();
-  }, [performCancellation]);
+    await performCancellation()
+  }, [performCancellation])
 
-  /**
-   * The core polling logic that checks for results after a delay.
-   * Using a function declaration here to allow self-reference (recursion) without declaration errors.
-   */
   async function pollForResults() {
-    const activeToken = currentTokenRef.current;
-    if (!activeToken || !isMountedRef.current) return;
+    const activeToken = currentTokenRef.current
+    if (!activeToken || !isMountedRef.current) return
 
     try {
-      const results = await priceService.getResults(activeToken);
-      
-      // ST2 Guard: Check if this response is still relevant (race condition guard)
-      if (activeToken !== currentTokenRef.current || !isMountedRef.current) return;
+      const results = await priceService.getResults(activeToken)
+
+      if (activeToken !== currentTokenRef.current || !isMountedRef.current) return
 
       if (Object.keys(results).length === 0) {
-        setStatus('empty');
+        setStatus('empty')
       } else {
-        setPrices(results);
-        setStatus('success');
-        
-        // Caching requirement from spec
+        setPrices(results)
+        setStatus('success')
+
         if (countryIDRef.current) {
-          searchStore.setCache(countryIDRef.current, results);
+          searchStore.setCache(countryIDRef.current, results)
         }
       }
     } catch (err) {
-      const activeTokenOnCatch = currentTokenRef.current;
-      if (activeToken !== activeTokenOnCatch || !isMountedRef.current) return;
+      const activeTokenOnCatch = currentTokenRef.current
+      if (activeToken !== activeTokenOnCatch || !isMountedRef.current) return
 
-      const searchError = err as SearchError;
+      const searchError = err as SearchError
 
-      // Handle 425 Too Early: Scheduling next poll
       if (searchError.code === 425 && searchError.waitUntil) {
-        const delay = Math.max(0, Date.parse(searchError.waitUntil) - Date.now());
-        setStatus('polling');
-        timerRef.current = window.setTimeout(pollForResults, delay);
-        return;
+        const delay = Math.max(
+          0,
+          Date.parse(searchError.waitUntil) - Date.now(),
+        )
+        setStatus('polling')
+        timerRef.current = window.setTimeout(pollForResults, delay)
+        return
       }
 
-      // Retry logic for other errors
       if (retryCountRef.current < 2) {
-        retryCountRef.current += 1;
-        setStatus('polling');
-        timerRef.current = window.setTimeout(pollForResults, 2000);
+        retryCountRef.current += 1
+        setStatus('polling')
+        timerRef.current = window.setTimeout(pollForResults, 2000)
       } else {
-        setError(searchError.message || 'Failed to fetch prices after retries');
-        setStatus('error');
+        setError(searchError.message || 'Failed to fetch prices after retries')
+        setStatus('error')
       }
     }
   }
 
-  // Wrap pollForResults in useCallback if we need to expose it, but here it's internal.
-  // We just need a stable search function to expose.
-
-  /**
-   * Initiates a new price search.
-   */
   const search = useCallback(async (countryID: string) => {
-    // 1. If search is active, cancel it first as per ST4
     if (currentTokenRef.current) {
-      await performCancellation();
+      await performCancellation()
     }
 
-    // 2. Set new active country ID
-    countryIDRef.current = countryID;
+    countryIDRef.current = countryID
 
-    // 3. Check cache
-    const cached = searchStore.getCache(countryID);
+    const cached = searchStore.getCache(countryID)
     if (cached) {
-      setPrices(cached);
-      setStatus('success');
-      setError(null);
-      return;
+      setPrices(cached)
+      setStatus('success')
+      setError(null)
+      return
     }
 
-    // 4. Reset state and start loading
-    clearTimer();
-    setStatus('loading');
-    setError(null);
-    setPrices(null);
-    retryCountRef.current = 0;
+    clearTimer()
+    setStatus('loading')
+    setError(null)
+    setPrices(null)
+    retryCountRef.current = 0
 
     try {
-      // 5. Start search and get token
-      const { token, waitUntil } = await priceService.startSearch(countryID);
-      
-      if (!isMountedRef.current) return;
-      
-      // Important: check if we are still searching for this country
-      if (countryIDRef.current !== countryID) return;
-      
-      currentTokenRef.current = token;
+      const { token, waitUntil } = await priceService.startSearch(countryID)
 
-      // 6. Schedule first poll based on waitUntil
-      const delay = Math.max(0, Date.parse(waitUntil) - Date.now());
-      setStatus('polling');
-      timerRef.current = window.setTimeout(pollForResults, delay);
+      if (!isMountedRef.current) return
 
+      if (countryIDRef.current !== countryID) return
+
+      currentTokenRef.current = token
+
+      const delay = Math.max(0, Date.parse(waitUntil) - Date.now())
+      setStatus('polling')
+      timerRef.current = window.setTimeout(pollForResults, delay)
     } catch (err) {
-      if (!isMountedRef.current || countryIDRef.current !== countryID) return;
-      const searchError = err as SearchError;
-      setError(searchError.message || 'Could not start price search');
-      setStatus('error');
+      if (!isMountedRef.current || countryIDRef.current !== countryID) return
+      const searchError = err as SearchError
+      setError(searchError.message || 'Could not start price search')
+      setStatus('error')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [performCancellation, clearTimer]); // Depend on stable callbacks
+  }, [performCancellation, clearTimer])
 
-  // Handle unmount cleanup
   useEffect(() => {
-    isMountedRef.current = true;
+    isMountedRef.current = true
     return () => {
-      isMountedRef.current = false;
-      clearTimer();
-    };
-  }, [clearTimer]);
+      isMountedRef.current = false
+      clearTimer()
+    }
+  }, [clearTimer])
 
   return {
     status,
@@ -185,6 +148,6 @@ export const useSearchPrices = () => {
     isSearching: status === 'loading' || status === 'polling' || status === 'cancelling',
     activeCountryID: countryIDRef.current,
     search,
-    cancel
-  };
-};
+    cancel,
+  }
+}

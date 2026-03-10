@@ -1,7 +1,7 @@
-import React, { useRef, useEffect } from 'react';
-import type { GeoEntity } from '../../types/geo.js';
-import { DropdownItem } from './DropdownItem.js';
-import './DropdownMenu.css';
+import React, { useRef, useEffect } from 'react'
+import type { GeoEntity } from '../../types/geo.js'
+import { DropdownItem } from './DropdownItem.js'
+import './DropdownMenu.css'
 
 interface DropdownMenuProps {
   items: GeoEntity[];
@@ -12,40 +12,34 @@ interface DropdownMenuProps {
   activeIndex?: number;
 }
 
-/**
- * Dropdown container component that renders the list of results.
- * UI layer: handles positioning (CSS), loading state, and click-outside closing.
- */
-export const DropdownMenu: React.FC<DropdownMenuProps> = ({ 
-  items, 
-  isOpen, 
-  onSelect, 
+export const DropdownMenu: React.FC<DropdownMenuProps> = ({
+  items,
+  isOpen,
+  onSelect,
   onClose,
   isLoading,
-  activeIndex = -1
+  activeIndex = -1,
 }) => {
-  const menuRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null)
 
-  // Click-outside listener
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return
 
     const handleClickOutside = (event: MouseEvent) => {
-      // Check if click was outside the menu (and not on the trigger parent if possible)
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        onClose();
+        onClose()
       }
-    };
+    }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onClose]);
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen, onClose])
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
-    <div 
-      className="dropdown-menu" 
+    <div
+      className="dropdown-menu"
       ref={menuRef}
       role="listbox"
       aria-expanded={isOpen}
@@ -60,7 +54,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
         </div>
       ) : (
         items.map((item, index) => (
-          <DropdownItem 
+          <DropdownItem
             key={`${item.type}-${item.id}`}
             entity={item}
             isActive={index === activeIndex}
@@ -70,4 +64,4 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
       )}
     </div>
   );
-};
+}

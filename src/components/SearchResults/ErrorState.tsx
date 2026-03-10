@@ -1,15 +1,11 @@
-import React from 'react';
-import './ErrorState.css';
+import React from 'react'
+import './ErrorState.css'
 
 interface ErrorStateProps {
   message: string;
   onRetry?: () => void;
 }
 
-/**
- * Presentational error component.
- * UI layer: displays error icon, message, and optional retry action.
- */
 export const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => {
   return (
     <div className="error-state">
@@ -22,4 +18,4 @@ export const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => {
       )}
     </div>
   );
-};
+}

@@ -1,5 +1,5 @@
-import React from 'react';
-import type { GeoEntity } from '../../types/geo.js';
+import React from 'react'
+import type { GeoEntity } from '../../types/geo.js'
 
 interface DropdownItemProps {
   entity: GeoEntity;
@@ -7,23 +7,23 @@ interface DropdownItemProps {
   onSelect: (entity: GeoEntity) => void;
 }
 
-/**
- * Presentational component for a single dropdown row.
- * UI layer: pure presentational, no state.
- */
 export const DropdownItem: React.FC<DropdownItemProps> = ({ entity, isActive, onSelect }) => {
   const getIcon = () => {
     switch (entity.type) {
       case 'country':
-        return entity.flag ? <img src={entity.flag} alt="" className="dropdown-item__flag" /> : '🏳️';
+        return entity.flag ? (
+          <img src={entity.flag} alt="" className="dropdown-item__flag" />
+        ) : (
+          '🏳️'
+        )
       case 'city':
-        return '🏙️';
+        return '🏙️'
       case 'hotel':
-        return '🏨';
+        return '🏨'
       default:
-        return '📍';
+        return '📍'
     }
-  };
+  }
 
   return (
     <div 
@@ -39,4 +39,4 @@ export const DropdownItem: React.FC<DropdownItemProps> = ({ entity, isActive, on
       )}
     </div>
   );
-};
+}

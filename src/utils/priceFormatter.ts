@@ -1,11 +1,3 @@
-/**
- * Utility for formatting price amounts into currency strings.
- * Uses locale-aware formatting via Intl.NumberFormat.
- * 
- * @param amount - The numeric amount to format.
- * @param currency - The currency code (e.g., 'usd').
- * @returns A formatted currency string.
- */
 export const formatPrice = (amount: number, currency: string): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -13,15 +5,8 @@ export const formatPrice = (amount: number, currency: string): string => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
-};
+}
 
-/**
- * Utility for formatting a date range.
- * 
- * @param startDate - The ISO date string for the start.
- * @param endDate - The ISO date string for the end.
- * @returns A formatted date range string.
- */
 export const formatDateRange = (startDate: string, endDate: string): string => {
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -36,7 +21,7 @@ export const formatDateRange = (startDate: string, endDate: string): string => {
   const locale = 'uk-UA'; 
   
   const startFormatted = start.toLocaleDateString(locale, options);
-  const endFormatted = end.toLocaleDateString(locale, options);
+  const endFormatted = end.toLocaleDateString(locale, options)
 
-  return `${startFormatted} — ${endFormatted}`;
-};
+  return `${startFormatted} — ${endFormatted}`
+}

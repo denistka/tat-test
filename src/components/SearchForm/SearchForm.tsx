@@ -1,8 +1,8 @@
-import React from 'react';
-import { useGeoSearch } from '../../hooks/useGeoSearch.js';
-import { DropdownMenu } from './DropdownMenu.js';
-import type { GeoEntity } from '../../types/geo.js';
-import './SearchForm.css';
+import React from 'react'
+import { useGeoSearch } from '../../hooks/useGeoSearch.js'
+import { DropdownMenu } from './DropdownMenu.js'
+import type { GeoEntity } from '../../types/geo.js'
+import './SearchForm.css'
 
 interface SearchFormProps {
   onSubmit: (entity: GeoEntity) => void;
@@ -11,16 +11,11 @@ interface SearchFormProps {
   onSelectionChange?: (entity: GeoEntity | null) => void;
 }
 
-/**
- * Main search form component.
- * Composes the geo-search logic (hook) with UI elements.
- * Following CTO rule: < 100 lines.
- */
-export const SearchForm: React.FC<SearchFormProps> = ({ 
-  onSubmit, 
-  isSearching = false, 
+export const SearchForm: React.FC<SearchFormProps> = ({
+  onSubmit,
+  isSearching = false,
   activeCountryID = null,
-  onSelectionChange
+  onSelectionChange,
 }) => {
   const {
     query,
@@ -33,68 +28,63 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     onSelect,
     closeDropdown,
     activeIndex,
-    setActiveIndex
-  } = useGeoSearch();
+    setActiveIndex,
+  } = useGeoSearch()
 
-  // Notify parent of selection changes (ST4 requirement: cancel if country chosed)
   React.useEffect(() => {
-    onSelectionChange?.(selected);
-  }, [selected, onSelectionChange]);
+    onSelectionChange?.(selected)
+  }, [selected, onSelectionChange])
 
-  /**
-   * BUG FIX: Unified select and submit handler.
-   * Ensures search starts immediately on selection (Click or Enter).
-   */
   const handleSelectAndSearch = (entity: GeoEntity) => {
-    onSelect(entity);
-    onSubmit(entity);
-    closeDropdown();
-  };
+    onSelect(entity)
+    onSubmit(entity)
+    closeDropdown()
+  }
 
   const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+    e.preventDefault()
+
     if (selected) {
-      handleSelectAndSearch(selected);
-      return;
+      handleSelectAndSearch(selected)
+      return
     }
 
     if (results.length > 0) {
-      const indexToSelect = activeIndex >= 0 ? activeIndex : 0;
-      handleSelectAndSearch(results[indexToSelect]);
+      const indexToSelect = activeIndex >= 0 ? activeIndex : 0
+      handleSelectAndSearch(results[indexToSelect])
     }
-  };
-
-  /**
-   * BUG FIX: Handle Keyboard Navigation (Arrows + Enter).
-   */
+  }
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
-      e.preventDefault();
+      e.preventDefault()
       if (!isOpen) {
-        onInputClick();
+        onInputClick()
       } else {
-        setActiveIndex(prev => (prev < results.length - 1 ? prev + 1 : prev));
+        setActiveIndex(prev =>
+          prev < results.length - 1 ? prev + 1 : prev,
+        )
       }
     } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
+      e.preventDefault()
+      setActiveIndex(prev => (prev > 0 ? prev - 1 : prev))
     } else if (e.key === 'Enter') {
       if (isOpen && activeIndex >= 0 && results[activeIndex]) {
-        e.preventDefault();
-        handleSelectAndSearch(results[activeIndex]);
+        e.preventDefault()
+        handleSelectAndSearch(results[activeIndex])
       }
     } else if (e.key === 'Escape') {
-      closeDropdown();
+      closeDropdown()
     }
-  };
+  }
 
-  // Logic: disable if (nothing selected AND query is empty) OR (searching AND same country)
-  const currentSelectedCountryID = selected?.type === 'country' ? String(selected.id) : selected?.countryId;
-  const isSameCountry = currentSelectedCountryID === activeCountryID;
-  
-  // Requirement: enable button if input is not empty
-  const isSubmitDisabled = (!selected && !query.trim()) || (isSearching && isSameCountry) || isLoading;
+  const currentSelectedCountryID =
+    selected?.type === 'country' ? String(selected.id) : selected?.countryId
+  const isSameCountry = currentSelectedCountryID === activeCountryID
+
+  const isSubmitDisabled =
+    (!selected && !query.trim()) ||
+    (isSearching && isSameCountry) ||
+    isLoading;
 
   return (
     <form className="search-form" onSubmit={handleFormSubmit}>
